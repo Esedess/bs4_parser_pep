@@ -6,8 +6,6 @@ from prettytable import PrettyTable
 
 from constants import BASE_DIR, DATETIME_FORMAT, OUTPUT_CHOICES
 
-RESULTS_DIR = BASE_DIR / 'results'
-
 
 def control_output(results, cli_args):
     output = cli_args.output
@@ -33,6 +31,7 @@ def pretty_output(results):
 
 
 def file_output(results, cli_args):
+    RESULTS_DIR = BASE_DIR / 'results'  # pytest ругается если убрать наверх
     RESULTS_DIR.mkdir(exist_ok=True)
     parser_mode = cli_args.mode
     now = dt.datetime.now()
