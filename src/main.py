@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import defaultdict
 from urllib.parse import urljoin
 
 import requests_cache
@@ -8,6 +9,7 @@ from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
 from constants import BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, MAIN_PEP_URL
+from exceptions import PythonVersionsException
 from outputs import control_output
 from utils import find_tag, get_response
 
@@ -15,8 +17,6 @@ from utils import find_tag, get_response
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
     response = get_response(session, whats_new_url)
-    if response is None:
-        return
 
     soup = BeautifulSoup(response.text, features='lxml')
     main_div = find_tag(soup, 'section', attrs={'id': 'what-s-new-in-python'})
@@ -29,8 +29,6 @@ def whats_new(session):
         href = version_a_tag['href']
         version_link = urljoin(whats_new_url, href)
         response = get_response(session, version_link)
-        if response is None:
-            continue
 
         soup = BeautifulSoup(response.text, features='lxml')
         h1 = find_tag(soup, 'h1')
@@ -43,8 +41,6 @@ def whats_new(session):
 
 def latest_versions(session):
     response = get_response(session, MAIN_DOC_URL)
-    if response is None:
-        return
 
     soup = BeautifulSoup(response.text, features='lxml')
 
@@ -56,7 +52,9 @@ def latest_versions(session):
             a_tags = ul.find_all('a')
             break
     else:
-        raise Exception('Ничего не нашлось')
+        error_msg = 'Не найден список версий Python.'
+        logging.error(error_msg)
+        raise PythonVersionsException(error_msg)
 
     results = [('Ссылка на документацию', 'Версия', 'Статус')]
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
@@ -75,8 +73,6 @@ def latest_versions(session):
 def download(session):
     downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
     response = get_response(session, downloads_url)
-    if response is None:
-        return
 
     soup = BeautifulSoup(response.text, features='lxml')
 
@@ -105,8 +101,6 @@ def download(session):
 
 def pep(session):
     response = get_response(session, MAIN_PEP_URL)
-    if response is None:
-        return
 
     soup = BeautifulSoup(response.text, features='lxml')
 
@@ -116,7 +110,7 @@ def pep(session):
 
     results = [('Status', 'Count')]
     statuses_mismatch = []
-    statuses_counts = {}
+    statuses_counts = defaultdict(int)
     for pep_row in tqdm(tr_tags):
         preview_status = EXPECTED_STATUS[pep_row.next_element.text[1:]]
 
@@ -131,14 +125,11 @@ def pep(session):
         for dt in dt_tags:
             if dt.text == 'Status:':
                 status = dt.find_next_sibling().text
-                if not (status in preview_status):
+                if status not in preview_status:
                     statuses_mismatch.append(
                         (pep_link, preview_status, status)
                     )
-                if status in statuses_counts:
-                    statuses_counts[status] += 1
-                else:
-                    statuses_counts[status] = 1
+                statuses_counts[status] += 1
 
     for status, count in statuses_counts.items():
         results.append((status, count))
@@ -172,7 +163,7 @@ def main():
     configure_logging()
     logging.info('Парсер запущен!')
 
-    arg_parser = configure_argument_parser(MODE_TO_FUNCTION.keys())
+    arg_parser = configure_argument_parser(MODE_TO_FUNCTION)
     args = arg_parser.parse_args()
     logging.info(f'Аргументы командной строки: {args}')
 

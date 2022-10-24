@@ -2,12 +2,16 @@ import logging
 
 from requests import RequestException
 
-from exceptions import ParserFindTagException
+from exceptions import EmptyResponseException, ParserFindTagException
 
 
 def get_response(session, url):
     try:
         response = session.get(url)
+        if response is None:
+            error_msg = f'Пустой ответ при загрузке страницы {url}'
+            logging.error(error_msg)
+            raise EmptyResponseException(error_msg)
         response.encoding = 'utf-8'
         return response
     except RequestException:
