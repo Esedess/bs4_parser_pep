@@ -10,7 +10,7 @@
 Клонировать репозиторий и перейти в него в командной строке:
 
 ```bash
-git clone https://github.com/KapkaDibab/bs4_parser_pep
+git clone https://github.com/Esedess/bs4_parser_pep
 ```
 
 ```bash
@@ -70,4 +70,4 @@ python src/main.py pep -o pretty
 ## Авторы
 
 - [@yandex-praktikum](https://github.com/yandex-praktikum)
-- [@KapkaDibab](https://github.com/KapkaDibab)
+- [@Esedess](https://github.com/Esedess)
